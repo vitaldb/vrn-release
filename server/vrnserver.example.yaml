@@ -1,0 +1,37 @@
+# vrnserver configuration (copy to vrnserver.yaml). See docs/VRN_PROTOCOL.md Part C2.
+
+listen:
+  addr: 127.0.0.1:8443        # behind nginx (TLS terminated there); or :443 with tls below
+  path: /vrn
+  tls: {cert: "", key: ""}
+
+storage:
+  dir: ./data                 # vital/ (recording), uploaded/, small/, state/
+  dgmt: -540                  # UTC - local in minutes (KST = -540): file names + .vital header
+  cut_file: 1                 # VR CUT_FILE: one file per patient (patient-connected detection)
+  cut_by: any                 # VR CUT_BY: "" (hr and spo2) | any | hr | spo2
+  pt_waiting_time: 5          # VR PT_WAITING_TIME, minutes
+  max_hours: 48               # a file is cut after this long
+  keep_days: 30               # uploaded files are deleted after this many days (0 = keep)
+
+upstream:
+  monitor: wss://mod.vitaldb.net:443   # intranet: ws://172.16.142.27:80   ("" = no web monitor)
+  upload: https://vitaldb.net          # POST /upload_vital.php ("" = keep files, no upload)
+  format: json
+  intranet: false             # true: also send numerics without a montype (VR intranet mode)
+  tls_verify: true
+  ver: 1.19.36                # version reported to VitalServer
+
+groups:                       # one group = one VitalServer vrcode = looks like one VR
+  - vrcode: abcd2345e         # existing vrcode keeps the beds already on the web monitor
+    beds:
+      # token_sha256 = output of: vrnserver hash-token <token set on the device>
+      - {bed: PACU1_1, mac: "10:bd:a3:c8:51:68", token_sha256: "0000000000000000000000000000000000000000000000000000000000000000", dev: Intellivue}
+
+limits:
+  max_frame_kb: 256
+  ack_every_s: 2
+  clock_skew_warn_s: 5
+
+status:
+  http: 127.0.0.1:8090        # GET /status
