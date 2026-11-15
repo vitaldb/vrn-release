@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.4 — 2026-11-15
+
+VRN server
+- Fix: bed edits from the web monitor's device form were ignored (VitalServer sends them as a
+  JSON string). Verified on vitaldb.net: form edit and Advanced Settings edit both apply live.
+- Device types saved by Vital Recorder as `Philips : Intellivue` are sent to the VRN as
+  `Intellivue`.
+- No log line for VitalServer's per-reply `dt` command.
+
+VRN firmware: unchanged (0.4.2).
+
 ## 0.4.3 — 2026-11-15
 
 VRN server

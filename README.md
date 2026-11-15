@@ -50,6 +50,9 @@ and its options. Network settings are written over USB only.
    Device options (e.g. IntelliVue `wavs`) are set here too; the VRN server sends them to the VRN.
 
 Beds and devices can be changed on the web at any time; the VRN server applies the change live.
+The device form (type / name / port) rewrites the whole device, as it does for Vital Recorder:
+options such as `wavs` are dropped. Set options in **Advanced Settings**, which edits the conf
+text shown below.
 
 ### Bed examples
 
