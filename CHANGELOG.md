@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.3 — 2026-11-15
+
+VRN server
+- A bed device's port may be the VRN's MAC alone (`10bda3c85168`, `10:bd:a3:c8:51:68`,
+  `10-BD-A3-C8-51-68`) as well as `4300@<MAC>`.
+
+VRN firmware: unchanged (0.4.2).
+
 ## 0.4.2 — 2026-11-15
 
 Setup is now three steps: register the VRN's MAC on the VitalServer web monitor

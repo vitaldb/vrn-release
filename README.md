@@ -38,16 +38,84 @@ and its options. Network settings are written over USB only.
 1. **My VR → add a VR** to get a **vrcode**. One vrcode is one group (e.g. one ward or OR suite)
    and appears as one Vital Recorder with several beds. Set its group as usual.
 2. Add the **beds**. In each bed, add the monitor as a device (e.g. type `Intellivue`) and set its
-   **port** to `4300@<VRN MAC>`:
+   **port** to the VRN's MAC (see `vrn_tool.py status`), alone or with the VRN server's port:
 
    ```
-   4300@10bda3c85168          the MAC may also be written 10:bd:a3:c8:51:68 or 10-BD-A3-C8-51-68
+   10bda3c85168               the MAC alone
+   4300@10bda3c85168          the same, with the VRN server's listen port
    ```
 
-   `4300` is the VRN server's listen port, the MAC identifies the VRN (see `vrn_tool.py status`).
+   The MAC may also be written `10:bd:a3:c8:51:68` or `10-BD-A3-C8-51-68`. (A MAC alone used
+   to mean a VitalConnect device in Vital Recorder; that use is replaced by the VRN.)
    Device options (e.g. IntelliVue `wavs`) are set here too; the VRN server sends them to the VRN.
 
 Beds and devices can be changed on the web at any time; the VRN server applies the change live.
+
+### Bed examples
+
+The web monitor's VR settings show the group as Vital Recorder's `vr.conf` text. Each bed is a
+`[BED/<name>]` section and each monitor a `[DEV/<name>]` section below it; one VRN per monitor.
+
+**One bed, MAC only** — the monitor sends its default waves:
+
+```ini
+[BED/OR1]
+
+[DEV/Intellivue]
+type=Intellivue
+port=10bda3c85168
+```
+
+**Choosing the waves** — `wavs` lists the waves to request, in priority order (names or Vital
+Recorder's numeric ids). Names: `I II III V V1`…`V6 AVR AVL AVF MCL MCL1 PLETH ART ABP AOP CVP
+PAP FAP ICP EEG CO2 RESP AWP AWF`. The monitor sends those it has, up to its own limit.
+
+```ini
+[BED/OR2]
+
+[DEV/Intellivue]
+type=Intellivue
+port=4300@10:bd:a3:cc:15:18
+wavs=II,V5,PLETH,ART,CVP,CO2,AWP
+```
+
+**A ward (one vrcode, several beds) with file-cutting rules** — the keys at the top apply to the
+whole group, as in Vital Recorder:
+
+```ini
+CUT_FILE=1
+CUT_BY=any
+PT_WAITING_TIME=5
+CUT_HOURLY=0
+
+[BED/PACU1]
+
+[DEV/Intellivue]
+type=Intellivue
+port=10bda3c85168
+
+[BED/PACU2]
+
+[DEV/Intellivue]
+type=Intellivue
+port=10-BD-A3-CF-A3-68
+```
+
+| key | meaning |
+|---|---|
+| `CUT_FILE` | `1` = one `.vital` file per patient (default), `0` = no patient detection |
+| `CUT_BY` | a patient is connected when there is: `any` = HR or SpO2, `hr`, `spo2`, empty = HR and SpO2 (BIS/PSI/INVOS always count) |
+| `PT_WAITING_TIME` | minutes without a patient before the file is closed (default 5) |
+| `CUT_HOURLY` | `1` = also start a new file every hour |
+
+Do not put comments on these lines: everything after `=` is the value.
+
+**Beds that are not VRNs** stay as they are: a port such as `COM3` or `4300@35.183` (an older
+recorder) is kept in the conf but not recorded by the VRN server.
+
+In this release a VRN drives **Philips IntelliVue** only (`type=Intellivue`). Another type is
+refused by the VRN and shown as `cfg_error` in the server's `/status`.
+
 
 ## 2. On the VRN server
 
@@ -75,7 +143,7 @@ Beds and devices can be changed on the web at any time; the VRN server applies t
      against vitaldb.net; set `upload: off` if files must stay on the server.
 3. Keep the server's clock synced (NTP): **the VRNs take their time from this server.**
 4. Check: `curl http://127.0.0.1:8090/status` — per bed: connected, data lag, gaps, current file.
-   A device port whose number is not the listen port is listed under `port_warnings`.
+   A `4300@<MAC>` port whose number is not the listen port is listed under `port_warnings`.
 
 ## 3. On the PC that prepares VRNs
 

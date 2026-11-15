@@ -1,8 +1,8 @@
 # vrnserver configuration (copy to vrnserver.yaml).
 #
 # Beds and devices are set on the VitalServer web monitor (My VR -> the vrcode -> beds): a bed's
-# device gets port=4300@<VRN MAC>, e.g. 4300@10bda3c85168 (10:bd:a3:c8:51:68 and
-# 10-BD-A3-C8-51-68 also work). 4300 is this server's listen port below.
+# device gets port=<VRN MAC> or 4300@<VRN MAC>, e.g. 10bda3c85168 or 4300@10bda3c85168
+# (10:bd:a3:c8:51:68 and 10-BD-A3-C8-51-68 also work). 4300 is this server's listen port below.
 
 vitalserver: wss://mod.vitaldb.net:443   # intranet: ws://172.16.142.27:80
 vrcodes: [abcd2345e]                     # the vrcodes (groups) this server records; several allowed
