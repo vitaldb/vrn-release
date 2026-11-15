@@ -134,6 +134,7 @@ refused by the VRN and shown as `cfg_error` in the server's `/status`.
    # listen: 4300                           # optional (default 4300)
    # data: ./data                           # optional
    # upload: off                            # optional: keep files, do not upload
+   # tls_verify: false                      # optional: VitalServer has a private certificate
    ```
 
    - The beds of each vrcode are read from VitalServer (step 1); nothing else to configure.
@@ -144,6 +145,9 @@ refused by the VRN and shown as `cfg_error` in the server's `/status`.
      after a crash. Finished files are uploaded like Vital Recorder does (to vitaldb.net, or to
      the intranet VitalServer). In 0.4.2 the upload is implemented but **not yet verified**
      against vitaldb.net; set `upload: off` if files must stay on the server.
+   - `tls_verify: false` accepts a private certificate on VitalServer or the upload server. Better:
+     add the hospital CA to the server's OS trust store and keep the check on. (Vital Recorder's
+     setting for the same thing is `TLS_INSECURE`; its default `1` does not check.)
 3. Keep the server's clock synced (NTP): **the VRNs take their time from this server.**
 4. Check: `curl http://127.0.0.1:8090/status` — per bed: connected, data lag, gaps, current file.
    A `4300@<MAC>` port whose number is not the listen port is listed under `port_warnings`.
@@ -156,8 +160,8 @@ Needs Python 3.9+ and `tools/` from this repository:
 python -m pip install -r tools/requirements.txt
 
 python tools/vrn_tool.py ports                              # find the VRN's USB port
-python tools/vrn_tool.py flash vrn-c5-0.4.2-full.bin        # new unit: full image, erases settings
-python tools/vrn_tool.py flash vrn-c5-0.4.2-app.bin --app   # update: keeps Wi-Fi/server settings
+python tools/vrn_tool.py flash vrn-c5-0.4.5-full.bin        # new unit: full image, erases settings
+python tools/vrn_tool.py flash vrn-c5-0.4.5-app.bin --app   # update: keeps Wi-Fi/server settings
 
 python tools/vrn_tool.py setup --ssid MyWiFi --pass 'wifi-password' \
     --server ws://192.168.0.10:4300/vrn                     # writes settings, then reboots
@@ -175,6 +179,7 @@ python tools/vrn_tool.py status                             # shows the MAC -> r
 | `--baud`, `--serial` | only if the monitor's port speed/format was changed from the factory value |
 | `--led 0` | status LED off |
 | `--ca file.pem` | trust a private CA for a `wss://` server with its own certificate |
+| `--tls_verify 0` | `wss://` without checking the server certificate (a private certificate whose CA you do not have). Still encrypted, but any server could pose as yours: prefer `--ca` |
 
 The monitor type and waves are **not** set here: they come from the VRN server (step 1).
 `get` shows the stored settings (password masked); `console` opens an interactive console

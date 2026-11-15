@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.5 — 2026-11-15
+
+VRN firmware 0.4.5
+- `tls_verify` setting (`vrn_tool.py setup --tls_verify 0`): connect to a `wss://` server without
+  checking its certificate. Default 1 (checked). `--ca` remains the safer way for a private CA.
+
+VRN server
+- `tls_verify: false` in the short config: accept a private certificate of VitalServer or the
+  upload server (default: checked).
+
+vrn_tool.py
+- `--tls_verify`; `setup` waits for each reply (a busy VRN could answer late, shown as "no reply").
+
 ## 0.4.4 — 2026-11-15
 
 VRN server

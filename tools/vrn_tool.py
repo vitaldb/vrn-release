@@ -20,12 +20,13 @@ Only network settings live on the VRN. What it acquires (monitor type, waves) is
 VitalServer web monitor and sent by the VRN server (bed device port = 4300@<VRN MAC>).
 
 Examples
-  python vrn_tool.py flash vrn-c5-0.4.2-full.bin              # new unit (erases settings)
-  python vrn_tool.py flash vrn-c5-0.4.3-app.bin --app         # update, keeps settings
+  python vrn_tool.py flash vrn-c5-0.4.5-full.bin              # new unit (erases settings)
+  python vrn_tool.py flash vrn-c5-0.4.5-app.bin --app         # update, keeps settings
   python vrn_tool.py setup --ssid MyWiFi --pass secret --server ws://192.168.0.10:4300/vrn
   python vrn_tool.py setup --ssid HIS --pass secret --server ws://172.16.142.70:4300/vrn \
          --ip 172.16.10.21/24 --gateway 172.16.10.1 --dns 172.16.10.1
   python vrn_tool.py setup --server wss://vrn.example.org/vrn --ca myca.pem   # private CA
+  python vrn_tool.py setup --server wss://172.16.142.70/vrn --tls_verify 0    # no CA check
   python vrn_tool.py status                                   # -> mac=10bda3c85168 ...
 """
 import argparse
@@ -76,6 +77,21 @@ def command(c, line, wait=0.8):
     return c.read(1 << 16).decode(errors="replace")
 
 
+def result(out):
+    """The last ok/err line of a console reply, or None."""
+    lines = [l.strip() for l in out.splitlines() if l.strip().startswith(("ok", "err"))]
+    return lines[-1] if lines else None
+
+
+def wait_result(c, out="", secs=5.0):
+    """Keep reading until the reply has its ok/err line: saving to flash can take a second or two
+    while the VRN is busy (for example retrying a server connection)."""
+    end = time.time() + secs
+    while result(out) is None and time.time() < end:
+        out += c.read(1 << 16).decode(errors="replace")
+    return out
+
+
 def cmd_ports(_):
     found = find_ports()
     if not found:
@@ -114,6 +130,8 @@ SETTABLE = {
     "baud": "monitor port speed if changed from the device default (empty = default)",
     "serial": "monitor port format, e.g. 8N1 (empty = device default)",
     "led": "1 (default) | 0 = status LED off",
+    "tls_verify": "wss:// only: 1 (default) = check the server certificate | 0 = accept any "
+                  "(a private certificate without --ca; firmware 0.4.5+)",
 }
 
 
@@ -124,10 +142,8 @@ def add_ca(c, path):
     for line in pem:
         c.write((line.strip() + "\n").encode())
         time.sleep(0.02)
-    time.sleep(0.8)
-    out = c.read(1 << 16).decode(errors="replace")
-    lines = [l.strip() for l in out.splitlines() if l.strip().startswith(("ok", "err"))]
-    print(f"{'ca':8s} -> {lines[-1] if lines else '(no reply)'}")
+    out = wait_result(c)
+    print(f"{'ca':10s} -> {result(out) or '(no reply)'}")
 
 
 def cmd_setup(a):
@@ -140,11 +156,10 @@ def cmd_setup(a):
         val = getattr(a, key if key != "pass" else "pass_", None)
         if val is None:
             continue
-        out = command(c, f"set {key}={val}")
+        out = wait_result(c, command(c, f"set {key}={val}", 0.3))
         for s in secrets:
             out = out.replace(s, "********")
-        lines = [l.strip() for l in out.splitlines() if l.strip().startswith(("ok", "err"))]
-        print(f"{key:8s} -> {lines[-1] if lines else '(no reply)'}")
+        print(f"{key:10s} -> {result(out) or '(no reply)'}")
     if not a.no_reboot:
         command(c, "reboot", 0.3)
         print("rebooting; check with:  vrn_tool.py status")

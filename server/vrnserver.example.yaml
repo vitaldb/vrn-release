@@ -13,5 +13,7 @@ vrcodes: [abcd2345e]                     # the vrcodes (groups) this server reco
 # data: ./data            # recordings (vital/), conf cache (conf/), state
 # upload: off             # default: UPLOAD_SERVER_IP/SERVER_IP of the conf, else vitaldb.net
 #                         # (cloud) or the intranet VitalServer itself; off = keep files here
+# tls_verify: false       # accept a private TLS certificate of VitalServer / the upload server
+#                         # (better: add the hospital CA to the OS trust store)
 #
 # Advanced (long form, local conf files instead of VitalServer): see README "Configuration".
