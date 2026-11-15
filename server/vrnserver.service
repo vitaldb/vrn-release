@@ -2,7 +2,7 @@
 #   sudo useradd -r -s /usr/sbin/nologin vrn
 #   sudo install -o vrn -d /opt/vrnserver /var/lib/vrnserver
 #   sudo cp vrnserver-<ver>-linux-amd64 /opt/vrnserver/vrnserver && sudo chmod +x /opt/vrnserver/vrnserver
-#   sudo cp vrnserver.yaml /opt/vrnserver/      (storage.dir: /var/lib/vrnserver)
+#   sudo cp vrnserver.yaml /opt/vrnserver/      (data: /var/lib/vrnserver)
 #   sudo cp vrnserver.service /etc/systemd/system/ && sudo systemctl enable --now vrnserver
 [Unit]
 Description=VRN server

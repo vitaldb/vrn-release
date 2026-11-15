@@ -8,13 +8,25 @@ Commands
   flash  <image.bin> [--port P] [--app]
                                       write firmware. Full image (default) erases all settings;
                                       --app writes only the application and keeps the settings.
-  setup  [--port P] --ssid S --pass W --server URL --token T [options]
-                                      write settings over the USB console, then reboot
-  get    [--port P]                   show settings (secrets are masked by the device)
-  status [--port P]                   show live status
+  setup  [--port P] --ssid S --pass W --server URL [options]
+                                      write network settings over the USB console, then reboot
+  get    [--port P]                   show settings (the Wi-Fi password is masked)
+  status [--port P]                   show live status (MAC, Wi-Fi, server, time, device)
   console [--port P]                  interactive console (type commands, Ctrl+C to quit)
 
 When --port is omitted and exactly one VRN is connected, that one is used.
+
+Only network settings live on the VRN. What it acquires (monitor type, waves) is set on the
+VitalServer web monitor and sent by the VRN server (bed device port = 4300@<VRN MAC>).
+
+Examples
+  python vrn_tool.py flash vrn-c5-0.4.2-full.bin              # new unit (erases settings)
+  python vrn_tool.py flash vrn-c5-0.4.3-app.bin --app         # update, keeps settings
+  python vrn_tool.py setup --ssid MyWiFi --pass secret --server ws://192.168.0.10:4300/vrn
+  python vrn_tool.py setup --ssid HIS --pass secret --server ws://172.16.142.70:4300/vrn \
+         --ip 172.16.10.21/24 --gateway 172.16.10.1 --dns 172.16.10.1
+  python vrn_tool.py setup --server wss://vrn.example.org/vrn --ca myca.pem   # private CA
+  python vrn_tool.py status                                   # -> mac=10bda3c85168 ...
 """
 import argparse
 import subprocess
@@ -87,14 +99,43 @@ def cmd_flash(a):
         print("\nfull image written: the VRN has no settings now. Next: vrn_tool.py setup ...")
 
 
-SETTABLE = ["name", "ssid", "pass", "server", "token", "band", "ip", "gateway", "netmask", "dns",
-            "ntp", "mac", "dev", "baud", "serial", "wavs", "led", "dgmt"]
+# key -> help. Firmware 0.4+ accepts exactly these; device type and waves come from the server.
+SETTABLE = {
+    "ssid": "Wi-Fi name (hidden SSIDs are fine)",
+    "pass": "Wi-Fi password",
+    "server": "VRN server URL: ws://<server>:4300/vrn, or wss://<name>/vrn behind TLS",
+    "ip": "static IPv4, e.g. 172.16.10.21/24 (empty = DHCP)",
+    "gateway": "static gateway",
+    "netmask": "static netmask (or use /prefix in --ip)",
+    "dns": "static DNS server",
+    "band": "auto (default) | 2g | 5g",
+    "mac": "use this Wi-Fi MAC instead of the factory one, e.g. 10:bd:a3:c8:51:68 (empty = factory)",
+    "name": "label shown in logs (default: last 4 hex of the MAC)",
+    "baud": "monitor port speed if changed from the device default (empty = default)",
+    "serial": "monitor port format, e.g. 8N1 (empty = device default)",
+    "led": "1 (default) | 0 = status LED off",
+}
+
+
+def add_ca(c, path):
+    """Install extra trust anchors (PEM) for a wss:// server with a private certificate."""
+    pem = open(path, encoding="ascii").read().strip().splitlines()
+    command(c, "ca add", 0.3)
+    for line in pem:
+        c.write((line.strip() + "\n").encode())
+        time.sleep(0.02)
+    time.sleep(0.8)
+    out = c.read(1 << 16).decode(errors="replace")
+    lines = [l.strip() for l in out.splitlines() if l.strip().startswith(("ok", "err"))]
+    print(f"{'ca':8s} -> {lines[-1] if lines else '(no reply)'}")
 
 
 def cmd_setup(a):
     port = pick_port(a.port)
     c = open_console(port)
-    secrets = [v for v in (a.pass_, a.token) if v]
+    secrets = [v for v in (a.pass_,) if v]
+    if a.ca:
+        add_ca(c, a.ca)
     for key in SETTABLE:
         val = getattr(a, key if key != "pass" else "pass_", None)
         if val is None:
@@ -139,8 +180,9 @@ def main():
     s = sub.add_parser("setup")
     s.add_argument("--port")
     s.add_argument("--no-reboot", action="store_true")
-    for key in SETTABLE:
-        s.add_argument(f"--{key}", dest=key if key != "pass" else "pass_")
+    for key, text in SETTABLE.items():
+        s.add_argument(f"--{key}", dest=key if key != "pass" else "pass_", help=text)
+    s.add_argument("--ca", metavar="PEM", help="add CA certificate(s) from a PEM file (private wss:// server)")
     for name in ("get", "status", "console"):
         sub.add_parser(name).add_argument("--port")
     a = ap.parse_args()

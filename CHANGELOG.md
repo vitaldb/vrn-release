@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.4.2 — 2026-11-15
+
+Setup is now three steps: register the VRN's MAC on the VitalServer web monitor
+(device port `4300@<MAC>`), give the server `vitalserver` + `vrcodes`, and give the VRN
+Wi-Fi + server URL.
+
+VRN firmware
+- Identity is the MAC; no device token.
+- Device type and options come only from the VRN server (set on the web); USB keeps network
+  settings only (`dev`, `wavs`, `token`, `ntp`, `dgmt` removed).
+- Time comes from the VRN server (no NTP on the device); records are re-stamped after the first
+  sync, and the monitor-time anchor is guarded against stale replies.
+- Waits for its config before acquiring; one image for all device types.
+
+VRN server
+- Short configuration: `vitalserver:` and `vrcodes:`; each vrcode's beds are read from
+  VitalServer and web edits apply live (local copy used when VitalServer is unreachable).
+- Listens on 4300 by default (`listen:` accepts a bare port). Device ports `4300@<MAC>` in any MAC
+  notation; a different port number is warned about in `/status`.
+- Serves time and device config to the VRNs; MAC conflicts close both sessions for 60 s.
+- One `.vital` file per patient (Vital Recorder cutting rules); upload like Vital Recorder
+  (not yet verified against vitaldb.net — `upload: off` keeps files).
+- Fixes: deadlock with the web relay, crash repair on Windows, resend after a server restart.
+
+
 ## 0.3.1 — 2026-11-14
 
 First public release.
