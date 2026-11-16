@@ -16,4 +16,13 @@ vrcodes: [abcd2345e]                     # the vrcodes (groups) this server reco
 # tls_verify: false       # accept a private TLS certificate of VitalServer / the upload server
 #                         # (better: add the hospital CA to the OS trust store)
 #
+# Over-the-air VRN firmware updates (VRN 0.5.0+). Put the -app.bin and its .sig from the release
+# in dir. Changes to vrcodes and ota apply when this file is saved (no restart).
+# ota:
+#   enable: true
+#   dir: ./fw
+#   version: "VRNIV 0.5.0"
+#   images: {c5: vrn-c5-0.5.0-app.bin, s3: vrn-s3-0.5.0-app.bin}
+#   beds: []              # only these beds (empty = all); never while a patient is connected
+#
 # Advanced (long form, local conf files instead of VitalServer): see README "Configuration".

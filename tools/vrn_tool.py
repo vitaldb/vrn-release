@@ -33,6 +33,7 @@ Examples
 """
 import argparse
 import subprocess
+import os
 import sys
 import time
 
@@ -107,8 +108,18 @@ def cmd_flash(a):
     offset = "0x10000" if a.app else "0x0"
     # no --chip: esptool detects it (ESP32-C5 Vitalnode, or ESP32-S3 = VRN2 / T-QT Pro). The image
     # must match the board: vrn-c5-* for the Vitalnode, vrn-s3-* for VRN2 hardware.
+    parts = [offset, a.image]
+    if a.app:
+        # 0.5+ updates over the air into the second app slot (app1). Blank the OTA boot pointer
+        # (otadata, 0xe000) too, so the device boots the slot written here (app0) and not an older
+        # over-the-air image.
+        import tempfile
+        blank = os.path.join(tempfile.gettempdir(), "vrn_otadata_blank.bin")
+        with open(blank, "wb") as f:
+            f.write(b"\xff" * 0x2000)
+        parts = ["0xe000", blank] + parts
     args = [sys.executable, "-m", "esptool", "--port", port, "--baud", "460800",
-            "write-flash", offset, a.image]
+            "write-flash"] + parts
     print(">>", " ".join(args))
     r = subprocess.call(args)
     if r != 0:

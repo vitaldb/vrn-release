@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.5.0 — 2026-11-16
+
+VRN firmware 0.5.0 — **first version with over-the-air updates** (Vitalnode C5 and VRN2 S3)
+- The VRN server can install new firmware remotely (README: "Over-the-air firmware updates").
+  Only images with the release signature are accepted; no update while a patient is connected;
+  a new image that does not reach the server within 5 minutes is rolled back automatically.
+  Field-tested on a C5 and a VRN2 unit at a PACU (download + check ~6 s).
+- The first monitor association after a restart waits until the time from the server arrives, so
+  the first data are never recorded with a wrong clock.
+- Console `rawdump 1|0` (diagnosis): copies the monitor's MIB frames to the USB console for a debug
+  host. Patient demographics are not copied. Off by default; nothing extra goes over the network.
+
+VRN server 0.5.0
+- `vrcodes` and the new `ota` section in `vrnserver.yaml` apply when the file is saved — adding a
+  group no longer restarts (and reconnects) every VRN. Other settings still need a restart.
+- OTA: offers the configured signed images (`/fw/` serves only those files) and logs the VRN's
+  report.
+- `/status`: per-bed wave interruption statistics; board, OTA state.
+- The web monitor no longer shows a number that stopped arriving: the last value is re-sent for
+  10 s only.
+- A state file save that fails (Windows file lock) is retried instead of closing the VRN's session.
+
+vrn_tool.py
+- `flash --app` also resets the OTA boot selection, so a USB update takes effect on a unit that was
+  updated over the air before.
+
 ## 0.4.6 — 2026-11-16
 
 VRN firmware 0.4.6

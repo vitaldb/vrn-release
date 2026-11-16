@@ -23,6 +23,7 @@ This repository publishes **binaries, tools and documentation only**. Download t
 | `vrn-c5-<ver>-app.bin` | VRN firmware for the Vitalnode, application only (update; keeps settings) |
 | `vrn-s3-<ver>-full.bin` / `-app.bin` | the same firmware for the older **VRN2 hardware** (LilyGo T-QT Pro ESP32-S3), see below |
 | `vrnserver-<ver>-linux-amd64` / `-linux-arm64` / `-windows-amd64.exe` | VRN server |
+| `vrn-*-<ver>-app.bin.sig` | release signature of the app image (for over-the-air updates, see below) |
 | `vrnserver.example.yaml` | server configuration template |
 | `SHA256SUMS` | checksums |
 
@@ -45,7 +46,10 @@ Flashing a full image replaces the VRN2 firmware. To keep the old one, first sav
 
 Security model: the VRN opens **no network port** — it only dials out to its VRN server. It never
 forwards raw bytes from the network to the monitor; the server can only choose the device type
-and its options. Network settings are written over USB only.
+and its options. Network settings are written over USB only. Firmware 0.5+ accepts an
+over-the-air update only if the image carries the **release signature** (checked on the VRN against
+a key built into the firmware), so a VRN server — even a compromised one — cannot install its own
+code.
 
 ---
 
@@ -167,6 +171,31 @@ refused by the VRN and shown as `cfg_error` in the server's `/status`.
 3. Keep the server's clock synced (NTP): **the VRNs take their time from this server.**
 4. Check: `curl http://127.0.0.1:8090/status` — per bed: connected, data lag, gaps, current file.
    A `4300@<MAC>` port whose number is not the listen port is listed under `port_warnings`.
+5. Changes to `vrcodes` and `ota` in `vrnserver.yaml` apply when the file is saved (0.5.0+); the
+   VRNs of the other groups stay connected. Other settings need a restart of the service.
+
+### Over-the-air firmware updates (VRN firmware 0.5.0+)
+
+A VRN running 0.5.0 or later can be updated from its VRN server instead of over USB. Download the
+`-app.bin` **and** its `.sig` for each board into one folder on the server, then add:
+
+```yaml
+ota:
+  enable: true
+  dir: C:/vrnserver/fw                 # holds vrn-c5-0.5.0-app.bin(.sig), vrn-s3-0.5.0-app.bin(.sig)
+  version: "VRNIV 0.5.0"               # the firmware the VRNs should run
+  images: {c5: vrn-c5-0.5.0-app.bin, s3: vrn-s3-0.5.0-app.bin}
+  beds: [OR1, OR2]                     # optional: only these beds (empty = all)
+```
+
+- The server offers the image to each VRN that runs another version, **never while a patient is
+  connected** (it waits). The VRN downloads it from the same server address it already uses
+  (works through relays/NAT; the VRN still opens no port), checks the SHA-256 and the release
+  signature, writes it to its second firmware slot and restarts (~10 s of data from that VRN).
+- The new firmware must hold a server connection for 30 s to confirm itself. Otherwise — or if it
+  crashes — the VRN returns to the previous firmware after at most 5 minutes and will not take that
+  version again. The server log shows `OTA offered / rebooting / ok / failed / rolled-back`.
+- Units below 0.5.0 need one USB update (`flash ... -app.bin --app`) first.
 
 ## 3. On the PC that prepares VRNs
 
@@ -176,9 +205,9 @@ Needs Python 3.9+ and `tools/` from this repository:
 python -m pip install -r tools/requirements.txt
 
 python tools/vrn_tool.py ports                              # find the VRN's USB port
-python tools/vrn_tool.py flash vrn-c5-0.4.6-full.bin        # new unit: full image, erases settings
-python tools/vrn_tool.py flash vrn-c5-0.4.6-app.bin --app   # update: keeps Wi-Fi/server settings
-# VRN2 hardware: the same commands with vrn-s3-0.4.6-full.bin / -app.bin
+python tools/vrn_tool.py flash vrn-c5-0.5.0-full.bin        # new unit: full image, erases settings
+python tools/vrn_tool.py flash vrn-c5-0.5.0-app.bin --app   # update: keeps Wi-Fi/server settings
+# VRN2 hardware: the same commands with vrn-s3-0.5.0-full.bin / -app.bin
 
 python tools/vrn_tool.py setup --ssid MyWiFi --pass 'wifi-password' \
     --server ws://192.168.0.10:4300/vrn                     # writes settings, then reboots
