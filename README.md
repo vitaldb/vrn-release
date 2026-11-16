@@ -19,13 +19,29 @@ This repository publishes **binaries, tools and documentation only**. Download t
 
 | Release asset | What |
 |---|---|
-| `vrn-c5-<ver>-full.bin` | VRN firmware, full image (first install; erases settings) |
-| `vrn-c5-<ver>-app.bin` | VRN firmware, application only (update; keeps settings) |
+| `vrn-c5-<ver>-full.bin` | VRN firmware for the Vitalnode (ESP32-C5), full image (first install; erases settings) |
+| `vrn-c5-<ver>-app.bin` | VRN firmware for the Vitalnode, application only (update; keeps settings) |
+| `vrn-s3-<ver>-full.bin` / `-app.bin` | the same firmware for the older **VRN2 hardware** (LilyGo T-QT Pro ESP32-S3), see below |
 | `vrnserver-<ver>-linux-amd64` / `-linux-arm64` / `-windows-amd64.exe` | VRN server |
 | `vrnserver.example.yaml` | server configuration template |
 | `SHA256SUMS` | checksums |
 
 Supported monitor in this release: **Philips IntelliVue** (MIB/RS-232, 115200 8N1).
+
+### VRN2 hardware (ESP32-S3)
+
+The `vrn-s3-*` images turn a VRN2 unit (LilyGo T-QT Pro S3 with the RS-232 board) into a VRN with
+the same settings, server and web setup as the Vitalnode. Its round screen shows the node name,
+IP and three dots instead of the LED: **PWR**, **MON** (monitor data), **SRV** (server link).
+This board has no PSRAM, so compared with the Vitalnode:
+
+- **2.4 GHz Wi-Fi only.**
+- **Small backlog:** about 48 KB in RAM, so a few seconds to tens of seconds of data. A longer
+  network or server outage loses the data beyond that (the Vitalnode keeps about 30 minutes).
+- **Uncompressed frames:** about 2-3 times the bytes on the network (a few KB/s per monitor).
+
+Flashing a full image replaces the VRN2 firmware. To keep the old one, first save it with
+`python -m esptool --port <PORT> read-flash 0 0x800000 vrn2_backup.bin`.
 
 Security model: the VRN opens **no network port** — it only dials out to its VRN server. It never
 forwards raw bytes from the network to the monitor; the server can only choose the device type
@@ -160,8 +176,9 @@ Needs Python 3.9+ and `tools/` from this repository:
 python -m pip install -r tools/requirements.txt
 
 python tools/vrn_tool.py ports                              # find the VRN's USB port
-python tools/vrn_tool.py flash vrn-c5-0.4.5-full.bin        # new unit: full image, erases settings
-python tools/vrn_tool.py flash vrn-c5-0.4.5-app.bin --app   # update: keeps Wi-Fi/server settings
+python tools/vrn_tool.py flash vrn-c5-0.4.6-full.bin        # new unit: full image, erases settings
+python tools/vrn_tool.py flash vrn-c5-0.4.6-app.bin --app   # update: keeps Wi-Fi/server settings
+# VRN2 hardware: the same commands with vrn-s3-0.4.6-full.bin / -app.bin
 
 python tools/vrn_tool.py setup --ssid MyWiFi --pass 'wifi-password' \
     --server ws://192.168.0.10:4300/vrn                     # writes settings, then reboots
@@ -191,7 +208,8 @@ release after 1 s, and run the command again. Use a USB **data** cable.
 Then connect the VRN to the monitor's serial port and power it.
 
 LEDs: at power-up R → G → B; then **R** = powered, **G** blinks with monitor data,
-**B** = connected to the server.
+**B** = connected to the server. `--led 0` keeps them dark after the power-up sequence. On VRN2
+hardware the screen shows the same as dots (PWR / MON / SRV); `--led 0` turns the screen off.
 
 ## Cable
 

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.4.6 — 2026-11-16
+
+VRN firmware 0.4.6
+- **VRN2 hardware** (LilyGo T-QT Pro ESP32-S3) is supported: `vrn-s3-0.4.6-*.bin`. It has no PSRAM,
+  so it sends uncompressed frames and keeps a small backlog (see README). Status is shown on its
+  screen. Tested on a PACU IntelliVue against the intranet VitalServer.
+- `status` shows the Wi-Fi power-save state (`ps=`); new console setting `ax` (0 = no Wi-Fi 6),
+  for diagnosis only.
+
+vrn_tool.py
+- `flash` detects the chip, so it works for both the Vitalnode (C5) and VRN2 (S3) images.
+
+VRN server: unchanged (0.4.5).
+
+Field note: a VRN given a hospital MAC/IP slot whose original device is still on the network
+connects and then drops every few seconds (two stations with one MAC). Check that a slot is free
+(e.g. arping from a node on the same Wi-Fi with the VRN switched off) before using it.
+
 ## 0.4.5 — 2026-11-15
 
 VRN firmware 0.4.5

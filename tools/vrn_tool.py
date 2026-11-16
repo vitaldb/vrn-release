@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""vrn_tool — flash and configure a VRN (Vitalnode, Seeed XIAO ESP32-C5) over USB.
+"""vrn_tool — flash and configure a VRN over USB (Vitalnode = Seeed XIAO ESP32-C5, or the VRN2
+hardware = LilyGo T-QT Pro ESP32-S3).
 
 Requirements:  python -m pip install -r requirements.txt   (esptool, pyserial)
 
@@ -20,8 +21,9 @@ Only network settings live on the VRN. What it acquires (monitor type, waves) is
 VitalServer web monitor and sent by the VRN server (bed device port = 4300@<VRN MAC>).
 
 Examples
-  python vrn_tool.py flash vrn-c5-0.4.5-full.bin              # new unit (erases settings)
-  python vrn_tool.py flash vrn-c5-0.4.5-app.bin --app         # update, keeps settings
+  python vrn_tool.py flash vrn-c5-0.4.6-full.bin              # new unit (erases settings)
+  python vrn_tool.py flash vrn-c5-0.4.6-app.bin --app         # update, keeps settings
+  python vrn_tool.py flash vrn-s3-0.4.6-full.bin              # VRN2 hardware (T-QT Pro S3)
   python vrn_tool.py setup --ssid MyWiFi --pass secret --server ws://192.168.0.10:4300/vrn
   python vrn_tool.py setup --ssid HIS --pass secret --server ws://172.16.142.70:4300/vrn \
          --ip 172.16.10.21/24 --gateway 172.16.10.1 --dns 172.16.10.1
@@ -103,7 +105,9 @@ def cmd_ports(_):
 def cmd_flash(a):
     port = pick_port(a.port)
     offset = "0x10000" if a.app else "0x0"
-    args = [sys.executable, "-m", "esptool", "--chip", "esp32c5", "--port", port, "--baud", "460800",
+    # no --chip: esptool detects it (ESP32-C5 Vitalnode, or ESP32-S3 = VRN2 / T-QT Pro). The image
+    # must match the board: vrn-c5-* for the Vitalnode, vrn-s3-* for VRN2 hardware.
+    args = [sys.executable, "-m", "esptool", "--port", port, "--baud", "460800",
             "write-flash", offset, a.image]
     print(">>", " ".join(args))
     r = subprocess.call(args)
