@@ -1,4 +1,4 @@
-# VRN — Vital Recorder Node (binary releases)
+# VRN — Vital Recorder Nano (binary releases)
 
 VRN turns a patient monitor's serial port into a network data source for
 [VitalDB](https://vitaldb.net). A **VRN** is a small Wi-Fi node (Vitalnode board, Seeed XIAO
