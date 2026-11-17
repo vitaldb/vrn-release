@@ -22,7 +22,7 @@ This repository publishes **binaries, tools and documentation only**. Download t
 | `vrn-c5-<ver>-full.bin` | VRN firmware for the Vitalnode (ESP32-C5), full image (first install; erases settings) |
 | `vrn-c5-<ver>-app.bin` | VRN firmware for the Vitalnode, application only (update; keeps settings) |
 | `vrn-s3-<ver>-full.bin` / `-app.bin` | the same firmware for the older **VRN2 hardware** (LilyGo T-QT Pro ESP32-S3), see below |
-| `vrnserver-<ver>-linux-amd64` / `-linux-arm64` / `-windows-amd64.exe` | VRN server |
+| `vrnserver-<ver>-linux-amd64` / `-linux-arm64` / `-windows-amd64.exe` | VRN server (single static binary; 0.6.0+ is written in Rust) |
 | `vrn-*-<ver>-app.bin.sig` | release signature of the app image (for over-the-air updates, see below) |
 | `vrnserver.example.yaml` | server configuration template |
 | `SHA256SUMS` | checksums |
@@ -186,6 +186,7 @@ ota:
   version: "VRNIV 0.5.0"               # the firmware the VRNs should run
   images: {c5: vrn-c5-0.5.0-app.bin, s3: vrn-s3-0.5.0-app.bin}
   beds: [OR1, OR2]                     # optional: only these beds (empty = all)
+  # force: true                        # optional: update even while a patient is connected
 ```
 
 - The server offers the image to each VRN that runs another version, **never while a patient is
@@ -196,6 +197,18 @@ ota:
   crashes — the VRN returns to the previous firmware after at most 5 minutes and will not take that
   version again. The server log shows `OTA offered / rebooting / ok / failed / rolled-back`.
 - Units below 0.5.0 need one USB update (`flash ... -app.bin --app`) first.
+- `force: true` updates beds with a patient too (the VRN restarts for ~20 s; firmware 0.5.2+
+  honours it, 0.5.0/0.5.1 still wait until the patient is gone).
+
+### Debug capture (VRN firmware 0.5.2+)
+
+Add `debug=1` to a bed's device in the VR settings on the web monitor (next to `type=` and
+`wavs=`). The VRN then also sends every frame it exchanges with the monitor to its VRN server,
+which keeps them per bed and day in `data/debug/<bed>/raw-YYYYMMDD.log.gz` for 14 days
+(`YYYY-MM-DD HH:MM:SS RAW RX|TX <epoch> <hex>`). Remove it (or set `debug=0`) to stop. Switching
+it does not interrupt the monitor connection. **The capture contains patient data, including
+demographics: keep the server's data folder as protected as the recordings.** Capture frames are
+dropped first when the network is busy; the recording is never affected.
 
 ## 3. On the PC that prepares VRNs
 
@@ -205,9 +218,9 @@ Needs Python 3.9+ and `tools/` from this repository:
 python -m pip install -r tools/requirements.txt
 
 python tools/vrn_tool.py ports                              # find the VRN's USB port
-python tools/vrn_tool.py flash vrn-c5-0.5.0-full.bin        # new unit: full image, erases settings
-python tools/vrn_tool.py flash vrn-c5-0.5.0-app.bin --app   # update: keeps Wi-Fi/server settings
-# VRN2 hardware: the same commands with vrn-s3-0.5.0-full.bin / -app.bin
+python tools/vrn_tool.py flash vrn-c5-0.5.2-full.bin        # new unit: full image, erases settings
+python tools/vrn_tool.py flash vrn-c5-0.5.2-app.bin --app   # update: keeps Wi-Fi/server settings
+# VRN2 hardware: the same commands with vrn-s3-0.5.2-full.bin / -app.bin
 
 python tools/vrn_tool.py setup --ssid MyWiFi --pass 'wifi-password' \
     --server ws://192.168.0.10:4300/vrn                     # writes settings, then reboots

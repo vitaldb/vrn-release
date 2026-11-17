@@ -23,6 +23,7 @@ vrcodes: [abcd2345e]                     # the vrcodes (groups) this server reco
 #   dir: ./fw
 #   version: "VRNIV 0.5.0"
 #   images: {c5: vrn-c5-0.5.0-app.bin, s3: vrn-s3-0.5.0-app.bin}
-#   beds: []              # only these beds (empty = all); never while a patient is connected
+#   beds: []              # only these beds (empty = all)
+#   force: false          # true = also while a patient is connected (VRN 0.5.2+)
 #
 # Advanced (long form, local conf files instead of VitalServer): see README "Configuration".

@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.5.2 — 2026-11-17
+
+VRN firmware 0.5.2 (Vitalnode C5 and VRN2 S3)
+- **No more 2 s wave gap every hour.** PACU IntelliVues' clocks run about 0.04 % slow against the
+  server time; firmware up to 0.5.1 corrected that with a 2 s jump roughly every 75 minutes. 0.5.2
+  follows the drift in 1 ms steps instead.
+- **Frames every 250 ms** instead of every second: data reach the server and the web monitor
+  sooner and more evenly (the web monitor's wave panes no longer blink when a second arrived empty).
+- **Debug capture** (`debug=1` on the bed's device, see README) - frames to the VRN server.
+- OTA `force` (see README); the console never blocks the monitor link when a USB host stops reading
+  (0.5.1).
+
+VRN server 0.6.0 - **rewritten in Rust**
+- Drop-in replacement for 0.5.x: same command line, `vrnserver.yaml`, data folder, state files,
+  .vital files and protocol (a 0.5.x data folder is taken over as is). Measured with 100 simulated
+  beds: about a quarter of the memory of 0.5.x at the same CPU.
+- Web monitor: waves are held back ~0.6-1.5 s (by each bed's arrival rhythm) so every 1 s update has
+  wave; files are not affected.
+- `ota.force`; debug capture storage (`data/debug/`); `-check` validates the yaml and the group
+  confs without starting.
+
+
 ## 0.5.0 — 2026-11-16
 
 VRN firmware 0.5.0 — **first version with over-the-air updates** (Vitalnode C5 and VRN2 S3)
