@@ -21,6 +21,7 @@ This repository publishes **binaries, tools and documentation only**. Download t
 |---|---|
 | `vrn-c5-<ver>-full.bin` | VRN firmware for the Vitalnode (ESP32-C5), full image (first install; erases settings) |
 | `vrn-c5-<ver>-app.bin` | VRN firmware for the Vitalnode, application only (update; keeps settings) |
+| `vrn-c6-<ver>-full.bin` / `-app.bin` | the same firmware for the **C6 board** (Seeed XIAO ESP32-C6), see below (0.5.3+) |
 | `vrn-s3-<ver>-full.bin` / `-app.bin` | the same firmware for the older **VRN2 hardware** (LilyGo T-QT Pro ESP32-S3), see below |
 | `vrnserver-<ver>-linux-amd64` / `-linux-arm64` / `-windows-amd64.exe` | VRN server (single static binary; 0.6.0+ is written in Rust) |
 | `vrn-*-<ver>-app.bin.sig` | release signature of the app image (for over-the-air updates, see below) |
@@ -28,6 +29,17 @@ This repository publishes **binaries, tools and documentation only**. Download t
 | `SHA256SUMS` | checksums |
 
 Supported monitor in this release: **Philips IntelliVue** (MIB/RS-232, 115200 8N1).
+
+### C6 board (ESP32-C6, firmware 0.5.3+)
+
+The `vrn-c6-*` images run on a Seeed XIAO ESP32-C6 wired like the Vitalnode (D0 TX, D1 RX, D2-D4
+LED R/G/B, the same RS-232 cable) with an external antenna on its U.FL connector (selected at
+boot). Settings, server and web setup are the same as the Vitalnode. Compared with the Vitalnode:
+
+- **2.4 GHz Wi-Fi only** (`--band` is ignored).
+- **No PSRAM, smaller backlog:** 96 KB of compressed frames in RAM, roughly 4 minutes of an
+  IntelliVue with a few waves. A longer network or server outage loses the data beyond that.
+- 4 MB flash; over-the-air updates work as on the other boards (`c6` image in `ota.images`).
 
 ### VRN2 hardware (ESP32-S3)
 
@@ -37,9 +49,9 @@ IP and three dots instead of the LED: **PWR**, **MON** (monitor data), **SRV** (
 This board has no PSRAM, so compared with the Vitalnode:
 
 - **2.4 GHz Wi-Fi only.**
-- **Small backlog:** about 48 KB in RAM, so a few seconds to tens of seconds of data. A longer
-  network or server outage loses the data beyond that (the Vitalnode keeps about 30 minutes).
-- **Uncompressed frames:** about 2-3 times the bytes on the network (a few KB/s per monitor).
+- **Small backlog:** about 42 KB of compressed frames in RAM (0.5.3+; before: 48 KB uncompressed),
+  roughly 1-2 minutes of data. A longer network or server outage loses the data beyond that (the
+  Vitalnode keeps about 30 minutes).
 
 Flashing a full image replaces the VRN2 firmware. To keep the old one, first save it with
 `python -m esptool --port <PORT> read-flash 0 0x800000 vrn2_backup.bin`.
@@ -182,9 +194,9 @@ A VRN running 0.5.0 or later can be updated from its VRN server instead of over 
 ```yaml
 ota:
   enable: true
-  dir: C:/vrnserver/fw                 # holds vrn-c5-0.5.0-app.bin(.sig), vrn-s3-0.5.0-app.bin(.sig)
-  version: "VRNIV 0.5.0"               # the firmware the VRNs should run
-  images: {c5: vrn-c5-0.5.0-app.bin, s3: vrn-s3-0.5.0-app.bin}
+  dir: C:/vrnserver/fw                 # holds vrn-c5-0.5.3-app.bin(.sig), vrn-c6-..., vrn-s3-...
+  version: "VRNIV 0.5.3"               # the firmware the VRNs should run
+  images: {c5: vrn-c5-0.5.3-app.bin, c6: vrn-c6-0.5.3-app.bin, s3: vrn-s3-0.5.3-app.bin}
   beds: [OR1, OR2]                     # optional: only these beds (empty = all)
   # force: true                        # optional: update even while a patient is connected
 ```
@@ -218,9 +230,10 @@ Needs Python 3.9+ and `tools/` from this repository:
 python -m pip install -r tools/requirements.txt
 
 python tools/vrn_tool.py ports                              # find the VRN's USB port
-python tools/vrn_tool.py flash vrn-c5-0.5.2-full.bin        # new unit: full image, erases settings
-python tools/vrn_tool.py flash vrn-c5-0.5.2-app.bin --app   # update: keeps Wi-Fi/server settings
-# VRN2 hardware: the same commands with vrn-s3-0.5.2-full.bin / -app.bin
+python tools/vrn_tool.py flash                              # new unit: full image, erases settings
+python tools/vrn_tool.py flash --app                        # update: keeps Wi-Fi/server settings
+# flash reads the chip and takes the newest vrn-<c5|c6|s3>-*-full.bin (-app.bin with --app) from
+# the current folder (or give a folder / an image file); an image for another chip is refused.
 
 python tools/vrn_tool.py setup --ssid MyWiFi --pass 'wifi-password' \
     --server ws://192.168.0.10:4300/vrn                     # writes settings, then reboots
@@ -236,7 +249,7 @@ python tools/vrn_tool.py status                             # shows the MAC -> r
 | `--mac` | use this Wi-Fi MAC instead of the factory one (e.g. to take over a registered network slot) |
 | `--name` | label shown in logs (default: last 4 hex of the MAC) |
 | `--baud`, `--serial` | only if the monitor's port speed/format was changed from the factory value |
-| `--led 0` | status LED off |
+| `--led 1` | status LED on (0.5.3+: off by default; the bed's VR settings can also set it) |
 | `--ca file.pem` | trust a private CA for a `wss://` server with its own certificate |
 | `--tls_verify 0` | `wss://` without checking the server certificate (a private certificate whose CA you do not have). Still encrypted, but any server could pose as yours: prefer `--ca` |
 
@@ -250,8 +263,9 @@ release after 1 s, and run the command again. Use a USB **data** cable.
 Then connect the VRN to the monitor's serial port and power it.
 
 LEDs: at power-up R → G → B; then **R** = powered, **G** blinks with monitor data,
-**B** = connected to the server. `--led 0` keeps them dark after the power-up sequence. On VRN2
-hardware the screen shows the same as dots (PWR / MON / SRV); `--led 0` turns the screen off.
+**B** = connected to the server. From 0.5.3 they stay dark after the power-up sequence unless
+`--led 1` (or the bed's VR settings) turns them on. On VRN2 hardware the screen shows the same as
+dots (PWR / MON / SRV); with the LED off the screen is off.
 
 ## Cable
 

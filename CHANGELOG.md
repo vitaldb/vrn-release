@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.5.3 — 2026-11-25
+
+VRN firmware 0.5.3 (Vitalnode C5, **new: C6 board**, VRN2 S3)
+- **C6 board** (Seeed XIAO ESP32-C6): `vrn-c6-*` images, see README. 2.4 GHz only, 96 KB backlog
+  (no PSRAM), external antenna. Tested on the bench (Wi-Fi, server session, settings);
+  first monitor tests follow.
+- `vrn_tool.py flash` reads the chip and picks the matching newest image from a folder; an image
+  for another chip is refused.
+- **VRN2 (S3): frames are compressed** (small built-in zlib): about twice the backlog in the same
+  RAM (~1-2 min instead of under a minute) and half the bytes on the network.
+- Wi-Fi: on a weak link the VRN keeps the unacknowledged data in flight bounded and pauses while
+  memory is low, instead of running out of memory; the Wi-Fi watch escalates (full Wi-Fi restart
+  every third retry, reboot if never joined within ~4 minutes). 2.4 GHz-only chips (S3, C6) no
+  longer log "5G is not supported".
+- Status LED off by default after the power-up sequence (`--led 1` or the bed's VR settings turn it
+  on), dimmable; reset reason and monitor-link counters in the periodic status.
+- Groundwork for the next VRN server (ignored by 0.6.0): signed remote network settings with a
+  trial and automatic revert, link diagnostics, the monitor's patient id when the server asks.
+
+VRN server: unchanged (0.6.0, attached again).
+
 ## 0.5.2 — 2026-11-17
 
 VRN firmware 0.5.2 (Vitalnode C5 and VRN2 S3)

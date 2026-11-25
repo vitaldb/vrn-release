@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""vrn_tool — flash and configure a VRN over USB (Vitalnode = Seeed XIAO ESP32-C5, or the VRN2
-hardware = LilyGo T-QT Pro ESP32-S3).
+"""vrn_tool — flash and configure a VRN over USB (Vitalnode = Seeed XIAO ESP32-C5, the C6 board =
+Seeed XIAO ESP32-C6, or the VRN2 hardware = LilyGo T-QT Pro ESP32-S3).
 
 Requirements:  python -m pip install -r requirements.txt   (esptool, pyserial)
 
 Commands
   ports                               list connected VRNs (USB VID 303A)
-  flash  <image.bin> [--port P] [--app]
+  flash  [image.bin | folder] [--port P] [--app]
                                       write firmware. Full image (default) erases all settings;
                                       --app writes only the application and keeps the settings.
+                                      The chip is read first (C5 / C6 / S3). Given a folder (default:
+                                      the current one), the newest vrn-<chip>-*-full.bin (or -app.bin
+                                      with --app) in it is used; an image for another chip is refused.
   setup  [--port P] --ssid S --pass W --server URL [options]
                                       write network settings over the USB console, then reboot
   get    [--port P]                   show settings (the Wi-Fi password is masked)
@@ -21,6 +24,8 @@ Only network settings live on the VRN. What it acquires (monitor type, waves) is
 VitalServer web monitor and sent by the VRN server (bed device port = 4300@<VRN MAC>).
 
 Examples
+  python vrn_tool.py flash                                     # new unit: right image for its chip
+  python vrn_tool.py flash --app                               # update: newest app image for its chip
   python vrn_tool.py flash vrn-c5-0.4.6-full.bin              # new unit (erases settings)
   python vrn_tool.py flash vrn-c5-0.4.6-app.bin --app         # update, keeps settings
   python vrn_tool.py flash vrn-s3-0.4.6-full.bin              # VRN2 hardware (T-QT Pro S3)
@@ -32,8 +37,10 @@ Examples
   python vrn_tool.py status                                   # -> mac=10bda3c85168 ...
 """
 import argparse
-import subprocess
+import glob
 import os
+import re
+import subprocess
 import sys
 import time
 
@@ -103,12 +110,60 @@ def cmd_ports(_):
         print(f"{p.device}\t{p.description}\tSN={p.serial_number or '-'}")
 
 
+# chip -> image family (the "board" a VRN reports; vrn-<board>-<version>-{full,app}.bin)
+BOARDS = {"c5": "Vitalnode (XIAO ESP32-C5)", "c6": "C6 board (XIAO ESP32-C6)", "s3": "VRN2 (T-QT Pro S3)"}
+
+
+def detect_board(port):
+    """Asks the ROM bootloader which chip this is: "c5", "c6", "s3" or None."""
+    r = subprocess.run([sys.executable, "-m", "esptool", "--port", port, "chip_id"],
+                       capture_output=True, text=True)
+    m = re.search(r"ESP32-(C5|C6|S3)", r.stdout + r.stderr)
+    return m.group(1).lower() if m else None
+
+
+def image_board(path):
+    m = re.search(r"vrn-(c5|c6|s3)-", os.path.basename(path))
+    return m.group(1) if m else None
+
+
+def version_key(path):
+    # vrn-<chip>-X.Y.Z[-devN]-...: 0.5.10 > 0.5.9, and a release sorts after its -devN builds
+    m = re.search(r"-(\d+)\.(\d+)\.(\d+)(?:-dev(\d+))?", os.path.basename(path))
+    if not m:
+        return (-1, 0, 0, 0)
+    x, y, z, dev = m.groups()
+    return (int(x), int(y), int(z), int(dev) if dev else float("inf"))
+
+
+def choose_image(arg, board, app):
+    if not os.path.isdir(arg):
+        return arg
+    kind = "app" if app else "full"
+    found = sorted(glob.glob(os.path.join(arg, f"vrn-{board}-*-{kind}.bin")), key=version_key)
+    if not found:
+        sys.exit(f"no vrn-{board}-*-{kind}.bin in {os.path.abspath(arg)} (this VRN is {BOARDS[board]})")
+    return found[-1]
+
+
 def cmd_flash(a):
     port = pick_port(a.port)
     offset = "0x10000" if a.app else "0x0"
-    # no --chip: esptool detects it (ESP32-C5 Vitalnode, or ESP32-S3 = VRN2 / T-QT Pro). The image
-    # must match the board: vrn-c5-* for the Vitalnode, vrn-s3-* for VRN2 hardware.
-    parts = [offset, a.image]
+    # Read the chip first so the image always matches the hardware: vrn-c5-* for the Vitalnode,
+    # vrn-c6-* for the XIAO ESP32-C6 board, vrn-s3-* for VRN2 hardware.
+    board = detect_board(port)
+    if not board:
+        sys.exit(f"could not read the chip on {port}. Unplug the VRN, hold its BOOT button while "
+                 "plugging the USB cable back in, release it after 1 s, and run the same command again.")
+    image = choose_image(a.image, board, a.app)
+    ib = image_board(image)
+    if ib and ib != board:
+        sys.exit(f"{os.path.basename(image)} is for {BOARDS[ib]}, but this VRN is {BOARDS[board]}: "
+                 f"use a vrn-{board}-* image")
+    if not ib:
+        print(f"note: the image name does not say its chip; this VRN is {BOARDS[board]}")
+    print(f"chip: {BOARDS[board]} -> {image}")
+    parts = [offset, image]
     if a.app:
         # 0.5+ updates over the air into the second app slot (app1). Blank the OTA boot pointer
         # (otadata, 0xe000) too, so the device boots the slot written here (app0) and not an older
@@ -144,7 +199,7 @@ SETTABLE = {
     "name": "label shown in logs (default: last 4 hex of the MAC)",
     "baud": "monitor port speed if changed from the device default (empty = default)",
     "serial": "monitor port format, e.g. 8N1 (empty = device default)",
-    "led": "1 (default) | 0 = status LED off",
+    "led": "0 (default since 0.5.3) | 1 = status LED on",
     "tls_verify": "wss:// only: 1 (default) = check the server certificate | 0 = accept any "
                   "(a private certificate without --ca; firmware 0.4.5+)",
 }
@@ -204,7 +259,8 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("ports")
     f = sub.add_parser("flash")
-    f.add_argument("image")
+    f.add_argument("image", nargs="?", default=".",
+                   help="image file, or a folder holding vrn-<chip>-* images (default: current folder)")
     f.add_argument("--port")
     f.add_argument("--app", action="store_true", help="application only, keep settings (update)")
     s = sub.add_parser("setup")
