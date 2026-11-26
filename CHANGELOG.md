@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.4 — 2026-11-26
+
+VRN firmware 0.5.4 (Vitalnode C5, C6 board, VRN2 S3)
+- **IntelliVue awRR** (respiration rate from CO2) is recorded as its own track **AWAY_RR**. Up to
+  0.5.3 it went into **RR** together with the impedance respiration rate, so a monitor measuring
+  both had two values alternating in one RR track. RR is now the impedance rate only.
+- SERVO ventilator with NAVA (via the IntelliVue): Edi min/max as EDI_MIN / EDI_MAX (uV).
+
+VRN server: unchanged (0.6.0, attached again).
+
 ## 0.5.3 — 2026-11-25
 
 VRN firmware 0.5.3 (Vitalnode C5, **new: C6 board**, VRN2 S3)

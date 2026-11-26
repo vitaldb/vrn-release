@@ -194,9 +194,9 @@ A VRN running 0.5.0 or later can be updated from its VRN server instead of over 
 ```yaml
 ota:
   enable: true
-  dir: C:/vrnserver/fw                 # holds vrn-c5-0.5.3-app.bin(.sig), vrn-c6-..., vrn-s3-...
-  version: "VRNIV 0.5.3"               # the firmware the VRNs should run
-  images: {c5: vrn-c5-0.5.3-app.bin, c6: vrn-c6-0.5.3-app.bin, s3: vrn-s3-0.5.3-app.bin}
+  dir: C:/vrnserver/fw                 # holds vrn-c5-0.5.4-app.bin(.sig), vrn-c6-..., vrn-s3-...
+  version: "VRNIV 0.5.4"               # the firmware the VRNs should run
+  images: {c5: vrn-c5-0.5.4-app.bin, c6: vrn-c6-0.5.4-app.bin, s3: vrn-s3-0.5.4-app.bin}
   beds: [OR1, OR2]                     # optional: only these beds (empty = all)
   # force: true                        # optional: update even while a patient is connected
 ```

@@ -21,8 +21,8 @@ vrcodes: [abcd2345e]                     # the vrcodes (groups) this server reco
 # ota:
 #   enable: true
 #   dir: ./fw
-#   version: "VRNIV 0.5.3"
-#   images: {c5: vrn-c5-0.5.3-app.bin, c6: vrn-c6-0.5.3-app.bin, s3: vrn-s3-0.5.3-app.bin}
+#   version: "VRNIV 0.5.4"
+#   images: {c5: vrn-c5-0.5.4-app.bin, c6: vrn-c6-0.5.4-app.bin, s3: vrn-s3-0.5.4-app.bin}
 #   beds: []              # only these beds (empty = all)
 #   force: false          # true = also while a patient is connected (VRN 0.5.2+)
 #
