@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.5 — 2026-11-26
+
+VRN firmware 0.5.5 (Vitalnode C5, C6 board, VRN2 S3)
+- SERVO ventilator with NAVA and airway volume (via the IntelliVue): new wave tracks **EDI_WAV**
+  (uV) and **VOL_WAV** (mL), 125 Hz. The monitor reports a different scale per bed and setting, so
+  the VRN converts with the scale it reports and records the values as float, like Vital Recorder.
+  `wavs=` accepts `EDI`.
+- New numerics CPAP_CMH2O and HFV_TV.
+
+VRN server: unchanged (0.6.0, attached again).
+
 ## 0.5.4 — 2026-11-26
 
 VRN firmware 0.5.4 (Vitalnode C5, C6 board, VRN2 S3)
